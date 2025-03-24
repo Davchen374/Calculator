@@ -1,0 +1,272 @@
+<html>
+  <head>
+    <title>Calculator</title>
+    <style>
+      .button {
+        width: 80px;
+        height: 40px;
+        background-color: #6969b3;
+        border: 0px;
+        color: #ffffffca;
+        border-radius: 6px;
+        box-shadow: 3px 5px 5px black;
+      }
+
+      button:hover {
+        background-color: #98c1d9;
+      }
+
+      button:active {
+        box-shadow: 2px 4px 4px black;
+      }
+
+      .flexContainer {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: space-evenly;
+        align-items: baseline;
+        width: 390px;
+        row-gap: 8px;
+      }
+
+      .displayContainer {
+        display: flex;
+        justify-content: flex-end;
+        width: 390px;
+      }
+
+      #display {
+        margin-right: 20px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>Calculator</h1>
+    <div class="displayContainer">
+      <span id="display"></span>
+    </div>
+
+    <div class="flexContainer">
+      <button class="button" onclick="clearDisplay()">C</button>
+      <button class="button" onclick="appendValue('(')">(</button>
+      <button class="button" onclick="appendValue(')')">)</button>
+      <button class="button" onclick="appendValue('/')">/</button>
+      <button class="button" onclick="appendValue('7')">7</button>
+      <button class="button" onclick="appendValue('8')">8</button>
+      <button class="button" onclick="appendValue('9')">9</button>
+      <button class="button" onclick="appendValue('*')">*</button>
+      <button class="button" onclick="appendValue('4')">4</button>
+      <button class="button" onclick="appendValue('5')">5</button>
+      <button class="button" onclick="appendValue('6')">6</button>
+      <button class="button" onclick="appendValue('-')">-</button>
+      <button class="button" onclick="appendValue('1')">1</button>
+      <button class="button" onclick="appendValue('2')">2</button>
+      <button class="button" onclick="appendValue('3')">3</button>
+      <button class="button" onclick="appendValue('+')">+</button>
+      <button class="button" onclick="appendValue('0')">0</button>
+      <button class="button" onclick="appendValue('.')">.</button>
+      <button class="button" onclick="calculateResult()">=</button>
+    </div>
+
+    <script>
+      const numbersArr = Array.from(document.getElementsByClassName("number"));
+      const operatorsArr = Array.from(document.getElementsByClassName("operator"));
+      const parenthesisArr = Array.from(document.getElementsByClassName("parenthesis"));
+      const numberStrs = "0123456789".split("");
+
+      const data = {
+        displayString: "0",
+        appendStringNum: (newChar) => {
+          if (newChar === ".") {
+            //decimal + 0?
+          }
+
+          if (numberStrs.includes(newChar)) {
+            if (data.displayString === "0") {
+              data.displayString = "";
+            }
+            data.displayString += newChar;
+          }
+          data.updateDisplay();
+        },
+
+        appendStringOperator: (newChar) => {
+          if (numberStrs.includes(data.displayString.slice(-1)) || data.displayString.slice(-1) === ")") {
+            data.displayString += newChar;
+          }
+          data.updateDisplay();
+        },
+
+        appendStringParenthesis: (newChar) => {
+          if (newChar === ")") {
+            if (data.displayString.split("(").length <= data.displayString.split(")").length) {
+              //if there are not enough open parenthesis to add a closing parenthesis terminate early
+              return;
+            }
+            if (operatorsArr.map((operator) => operator.innerText).includes(data.displayString[data.displayString.length - 1])) {
+              //early termination for adding parenthesis after operator
+              return;
+            }
+          }
+          if (data.displayString === "0") {
+            data.displayString = "";
+            data.displayString += newChar;
+            return;
+          }
+
+          data.displayString += newChar;
+
+          data.updateDisplay();
+        },
+        updateDisplay: () => {
+          const display = document.getElementById("display");
+          display.innerText = data.displayString;
+        },
+      };
+
+      const display = document.getElementById("display");
+      display.innerText = data.displayString;
+
+      numbersArr.map((elem, i) => {
+        elem.addEventListener("click", (evt) => {
+          data.appendStringNum(elem.innerText);
+        });
+      });
+
+      operatorsArr.map((elem, i) => {
+        elem.addEventListener("click", (evt) => {
+          data.appendStringOperator(elem.innerText);
+        });
+      });
+      parenthesisArr.map((elem, i) => {
+        elem.addEventListener("click", (evt) => {
+          data.appendStringParenthesis(elem.innerText);
+        });
+      });
+      function precedence(op) {
+        if (op === "+" || op === "-") return 1;
+        if (op === "*" || op === "/") return 2;
+        if (op === "^") return 3;
+        return 0;
+      }
+
+      // Function to convert infix expression to postfix
+      function infixToPostfix(expression) {
+        let stack = [];
+        let output = [];
+        let tokens = expression.split(/\s*(\+|\-|\*|\/|\^|\(|\))\s*/).filter(t => t.trim());
+        
+        for (let token of tokens) {
+          if (/\d/.test(token)) {
+            output.push(token);
+          } else if (token === "(") {
+            stack.push(token);
+          } else if (token === ")") {
+            while (stack.length && stack[stack.length - 1] !== "(") {
+              output.push(stack.pop());
+            }
+            stack.pop(); // Pop '('
+          } else if (precedence(token)) {
+            while (stack.length && precedence(token) <= precedence(stack[stack.length - 1])) {
+              output.push(stack.pop());
+            }
+            stack.push(token);
+          }
+        }
+
+        while (stack.length) {
+          output.push(stack.pop());
+        }
+
+        return output.join(" ");
+      }
+
+      class Node {
+        constructor(value) {
+          this.value = value;
+          this.left = null;
+          this.right = null;
+        }
+      }
+
+      
+      function buildExpressionTree(postfix) {
+        let stack = [];
+        let tokens = postfix.split(" ");
+
+        for (let token of tokens) {
+          if (/\d/.test(token)) {
+            stack.push(new Node(token));
+          } else {
+            let right = stack.pop();
+            let left = stack.pop();
+            let node = new Node(token);
+            node.left = left;
+            node.right = right;
+            stack.push(node);
+          }
+        }
+
+        return stack.pop();
+      }
+
+      
+      function evaluateTree(node) {
+        if (!node) return 0;
+
+        if (!isNaN(node.value)) {
+          return parseFloat(node.value);
+        }
+
+        let left = evaluateTree(node.left);
+        let right = evaluateTree(node.right);
+
+        switch (node.value) {
+          case '+': return left + right;
+          case '-': return left - right;
+          case '*': return left * right;
+          case '/': return left / right;
+          case '^': return Math.pow(left, right);
+          default: return 0;
+        }
+      }
+
+      
+      function appendValue(value) {
+        const display = document.getElementById('display');
+        if (display.innerText === "0" && value !== '.') {
+          display.innerText = value;
+        } else {
+          display.innerText += value;
+        }
+      }
+      function clearDisplay() {
+        document.getElementById('display').innerText = "0";
+      }
+      function calculateResult() {
+        const expression = document.getElementById('display').innerText;
+
+        try {
+        
+          const postfix = infixToPostfix(expression);
+
+          
+          const expressionTree = buildExpressionTree(postfix);
+
+          
+          document.getElementById('display').innerText = evaluateTree(expressionTree);
+        } catch (error) {
+          alert('Invalid input');
+        }
+      }
+
+      
+      
+
+      
+    
+    </script>
+  </body>
+</html>
